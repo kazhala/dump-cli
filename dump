@@ -3,14 +3,16 @@
 set -e
 set -f
 
-DUMP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dump"
+DUMP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dump/trash"
+DUMP_LOG="${XDG_DATA_HOME:-$HOME/.local/share}/dump/log"
 
 [[ ! -d "${DUMP_DIR}" ]] && mkdir -p "${DUMP_DIR}"
 
 
 function put() {
-  local files_to_remove="$@" esc=$(printf '\033') candidates=()
-  if [[ -z "${files_to_remove}" ]]; then
+  local files_to_remove=("$@") esc candidates=()
+  if [[ "${#files_to_remove[@]}" -eq 0 ]]; then
+    esc=$(printf '\033')
     while IFS= read -r line; do
       candidates+=("${esc}[34m${line}/${esc}[m")
     done < <(fd --type d -d 1)
@@ -18,45 +20,45 @@ function put() {
       candidates+=("${line}")
     done < <(fd --type f -d 1)
 
-    files_to_remove=$(
+    files_to_remove=($(
       IFS=$'\n'
       echo "${candidates[*]}" \
         | fzf --ansi --exit-0 --multi
-    )
+    ))
+    [[ -z "${files_to_remove}" ]] && exit 1
   fi
-  [[ -z "${files_to_remove}" ]] && exit 1
-  while IFS=$'\n' read -r line; do
-    mv "${line}" "${DUMP_DIR}"/
-    touch "${DUMP_DIR}"/"${line}"
-    echo "dump: ${line}"
-  done < <(echo "${files_to_remove}" | tr " " "\n")
+  for file in "${files_to_remove[@]}"; do
+    mv -v "${file}" "${DUMP_DIR}"/
+    echo "${file}: $PWD/${file}" >> "${DUMP_LOG}"
+  done
 }
 
 function regret() {
-  local action_mode="first" files_to_reset esc=$(printf '\033') candidates=()
-  case "$1" in
-    -s|--select)
-      action_mode="select"
-      shift
-      ;;
-    *)
-      [[ -n "$1" ]] && \
-        echo "Invalid option $1" 1>&2 && \
-        exit 1
-  esac
+  local files_removed=() file_name file_to_revert
+  while IFS= read -r line; do
+    file_name="${line%%: *}"
+    if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
+      [[ -z "${file_to_revert}" ]] && \
+        file_to_revert="${line}" || \
+        files_removed+=("${line}")
+    fi
+  done < <(tac "${DUMP_LOG}")
+  printf "%s\n" "${files_removed[@]}" | tac > "${DUMP_LOG}"
+  [[ -n "${file_to_revert}" ]] && \
+    mv -v "${DUMP_DIR}/${file_to_revert%%: *}" "${file_to_revert##*: }"
 }
 
 action_comand="put"
 case $1 in
-  put)
+  --put|-p)
     action_comand="put"
     shift
     ;;
-  clean)
+  --clean|-c)
     action_comand="clean"
     shift
     ;;
-  regret)
+  --regret|-r)
     action_comand='regret'
     shift
     ;;
