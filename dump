@@ -53,6 +53,9 @@ function put() {
         DUMP_CONFIRM="y"
         shift
         ;;
+      *)
+        break
+        ;;
     esac
   done
 
@@ -76,7 +79,7 @@ function put() {
 
   [[ "${#files_to_remove[@]}" -eq 0 ]] && exit 1
   [[ -z "${DUMP_CONFIRM}" ]] && \
-    DUMP_CONFIRM=$(get_confirm "put: dump selected files?")
+    DUMP_CONFIRM=$(get_confirm "put: confirm dump?")
   [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
   for file in "${files_to_remove[@]}"; do
     mv -v "${file}" "${DUMP_DIR}"/
@@ -104,6 +107,9 @@ function regret() {
       -s|--select)
         fuzzy="true"
         shift
+        ;;
+      *)
+        break
         ;;
     esac
   done
@@ -162,6 +168,9 @@ function clean() {
         fuzzy="true"
         shift
         ;;
+      *)
+        break
+        ;;
     esac
   done
 
@@ -189,6 +198,20 @@ function clean() {
       fi
     done
   fi
+}
+
+#######################################
+# using a pager to list all dumps
+# Arguments:
+#   None
+#######################################
+function log() {
+  tac "${DUMP_LOG}" \
+    | awk -F ":" '
+        BEGIN { printf "%-31s %-40s\n", "Name", "Location" }
+        { printf "%-30s %-40s\n", $1, $2}
+      ' \
+    | less
 }
 
 action_comand="put"
