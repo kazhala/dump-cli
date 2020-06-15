@@ -97,6 +97,10 @@ function regret() {
     while IFS= read -r line; do
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi)
+    [[ "${#file_to_revert[@]}" -eq 0 ]] && exit 1
+    [[ -z "${confirm}" ]] && \
+      confirm=$(get_confirm "regret: selected dumps?")
+    [[ "${confirm}" != 'y' ]] && exit 1
     for file in "${files_to_revert[@]}"; do
       file_name="${file%%: *}"
       if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
@@ -146,7 +150,7 @@ function clean() {
   done
   if [[ -z "${fuzzy}" ]]; then
     [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "Clear all dumps?")
+      confirm=$(get_confirm "clean: all dumps?")
     [[ "${confirm}" == 'n' ]] && exit 1
     rm -vrf "${DUMP_DIR}"
     truncate -s 0 "${DUMP_LOG}"
@@ -154,8 +158,9 @@ function clean() {
     while IFS= read -r line; do
       files_to_clean+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi)
+    [[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
     [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "Clear selected dumps?")
+      confirm=$(get_confirm "clean: selected dumps?")
     [[ "${confirm}" == 'n' ]] && exit 1
     for file in "${files_to_clean[@]}"; do
       file_name="${file%%: *}"
