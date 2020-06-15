@@ -7,6 +7,7 @@
 #   DUMP_DIR: location to store trash
 #   DUMP_LOG: file to record all dumps
 #   action_comand: function to execute
+#   DUMP_CONFIRM: skip confirmation
 # Arguments
 #   --regret: revert a dump
 #   --put: put a file to dump
@@ -46,6 +47,15 @@ function get_confirm() {
 #######################################
 function put() {
   local files_to_remove=("$@") esc candidates=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -y|--yes)
+        DUMP_CONFIRM="y"
+        shift
+        ;;
+    esac
+  done
+
   if [[ "${#files_to_remove[@]}" -eq 0 ]]; then
     esc=$(printf '\033')
     while IFS= read -r line; do
@@ -63,6 +73,11 @@ function put() {
         | fzf --ansi --exit-0 --multi
     )
   fi
+
+  [[ "${#files_to_remove[@]}" -eq 0 ]] && exit 1
+  [[ -z "${DUMP_CONFIRM}" ]] && \
+    DUMP_CONFIRM=$(get_confirm "put: dump selected files?")
+  [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
   for file in "${files_to_remove[@]}"; do
     mv -v "${file}" "${DUMP_DIR}"/
     sed -i '' "s|${file}: $PWD/${file}||g" "${DUMP_LOG}"
@@ -75,15 +90,15 @@ function put() {
 # regret a file, move a file from dump to 
 # it's orignal location
 # Arguments:
-#   -y|--confirm: proceed without confirm prompt
+#   -y|--yes: proceed without confirm prompt
 #   -s|--select: use fzf to select a file to revert
 #######################################
 function regret() {
-  local files_removed=() file_name file_to_revert confirm fuzzy files_to_revert=()
+  local files_removed=() file_name file_to_revert fuzzy files_to_revert=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -y|--confirm)
-        confirm="y"
+      -y|--yes)
+        DUMP_CONFIRM="y"
         shift
         ;;
       -s|--select)
@@ -98,9 +113,9 @@ function regret() {
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi)
     [[ "${#file_to_revert[@]}" -eq 0 ]] && exit 1
-    [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "regret: selected dumps?")
-    [[ "${confirm}" != 'y' ]] && exit 1
+    [[ -z "${DUMP_CONFIRM}" ]] && \
+      DUMP_CONFIRM=$(get_confirm "regret: reset selected dumps to orignal location?")
+    [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
     for file in "${files_to_revert[@]}"; do
       file_name="${file%%: *}"
       if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
@@ -109,6 +124,7 @@ function regret() {
         sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
       fi
     done
+
   else
     while IFS= read -r line; do
       file_name="${line%%: *}"
@@ -118,9 +134,9 @@ function regret() {
           files_removed+=("${line}")
       fi
     done < <(tac "${DUMP_LOG}")
-    [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "regret: ${file_to_revert}?")
-    [[ "${confirm}" != 'y' ]] && exit 1
+    [[ -z "${DUMP_CONFIRM}" ]] && \
+      DUMP_CONFIRM=$(get_confirm "regret: reset ${file_to_revert%%: *} to ${file_to_revert##*: }?")
+    [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
     printf "%s\n" "${files_removed[@]}" | tac > "${DUMP_LOG}"
     [[ -n "${file_to_revert}" ]] && \
       mv -v "${DUMP_DIR}/${file_to_revert%%: *}" "${file_to_revert##*: }"
@@ -131,15 +147,15 @@ function regret() {
 #######################################
 # clean the dump folder and log
 # Arguments:
-#   -y|--confirm: proceed without confirm prompt
+#   -y|--yes: proceed without confirm prompt
 #   -s|--select: use fzf to select a file to revert
 #######################################
 function clean() {
-  local confirm fuzzy files_to_clean=()
+  local fuzzy files_to_clean=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -y|--confirm)
-        confirm="y"
+      -y|--yes)
+        DUMP_CONFIRM="y"
         shift
         ;;
       -s|--select)
@@ -148,20 +164,22 @@ function clean() {
         ;;
     esac
   done
+
   if [[ -z "${fuzzy}" ]]; then
-    [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "clean: all dumps?")
-    [[ "${confirm}" == 'n' ]] && exit 1
+    [[ -z "${DUMP_CONFIRM}" ]] && \
+      DUMP_CONFIRM=$(get_confirm "clean: delete all dumps?")
+    [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
     rm -vrf "${DUMP_DIR}"
     truncate -s 0 "${DUMP_LOG}"
+
   else
     while IFS= read -r line; do
       files_to_clean+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi)
     [[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
-    [[ -z "${confirm}" ]] && \
-      confirm=$(get_confirm "clean: selected dumps?")
-    [[ "${confirm}" == 'n' ]] && exit 1
+    [[ -z "${DUMP_CONFIRM}" ]] && \
+      DUMP_CONFIRM=$(get_confirm "clean: delete selected dumps?")
+    [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
     for file in "${files_to_clean[@]}"; do
       file_name="${file%%: *}"
       if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
