@@ -109,7 +109,8 @@ function regret() {
         shift
         ;;
       *)
-        break
+        echo "Invalid option $1" 1>&2
+        exit 1
         ;;
     esac
   done
@@ -169,7 +170,8 @@ function clean() {
         shift
         ;;
       *)
-        break
+        echo "Invalid option $1" 1>&2
+        exit 1
         ;;
     esac
   done
@@ -192,7 +194,7 @@ function clean() {
     for file in "${files_to_clean[@]}"; do
       file_name="${file%%: *}"
       if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
-        rm -vrf "${DUMP_DIR}/${file_name}"
+        rm -vrf "${DUMP_DIR:?}/${file_name}"
         sed -i '' "s|${file}||g" "${DUMP_LOG}"
         sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
       fi
@@ -202,8 +204,6 @@ function clean() {
 
 #######################################
 # using a pager to list all dumps
-# Arguments:
-#   None
 #######################################
 function log() {
   tac "${DUMP_LOG}" \
