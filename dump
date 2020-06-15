@@ -65,6 +65,8 @@ function put() {
   fi
   for file in "${files_to_remove[@]}"; do
     mv -v "${file}" "${DUMP_DIR}"/
+    sed -i '' "s|${file}: $PWD/${file}||g" "${DUMP_LOG}"
+    sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     echo "${file}: $PWD/${file}" >> "${DUMP_LOG}"
   done
 }
