@@ -62,10 +62,10 @@ function put() {
     esc=$(printf '\033')
     while IFS= read -r line; do
       candidates+=("${esc}[34m${line}/${esc}[m")
-    done < <(fd --type d -d 1)
+    done < <(find . -maxdepth 1 -mindepth 1 -type d -exec basename {} +)
     while IFS= read -r line; do
       candidates+=("${line}")
-    done < <(fd --type f -d 1)
+    done < <(find . -maxdepth 1 -mindepth 1 -type f -exec basename {} +)
 
     while IFS= read -r line; do
       files_to_remove+=("${line}")
