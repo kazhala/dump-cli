@@ -180,7 +180,7 @@ function clean() {
     [[ -z "${DUMP_CONFIRM}" ]] && \
       DUMP_CONFIRM=$(get_confirm "clean: delete all dumps?")
     [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
-    rm -vrf "${DUMP_DIR}"/{*,.*??}
+    rm -vrf "${DUMP_DIR:?}"/{*,.*??}
     truncate -s 0 "${DUMP_LOG}"
 
   else
