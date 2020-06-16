@@ -232,4 +232,4 @@ case $1 in
     ;;
 esac
 
-eval "${action_comand}" "$*"
+"${action_comand}" "$@"
