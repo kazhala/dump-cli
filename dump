@@ -124,7 +124,7 @@ function regret() {
     [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
     for file in "${files_to_revert[@]}"; do
       file_name="${file%%: *}"
-      if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
+      if find "${DUMP_DIR}/${file_name}" &>/dev/null; then
         mv -v "${DUMP_DIR}"/"${file_name}" "${file##*: }"
         sed -i '' "s|${file}||g" "${DUMP_LOG}"
         sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
@@ -134,7 +134,7 @@ function regret() {
   else
     while IFS= read -r line; do
       file_name="${line%%: *}"
-      if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
+      if find "${DUMP_DIR}/${file_name}" &>/dev/null; then
         [[ -z "${file_to_revert}" ]] && \
           file_to_revert="${line}" || \
           files_removed+=("${line}")
@@ -192,11 +192,9 @@ function clean() {
     [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
     for file in "${files_to_clean[@]}"; do
       file_name="${file%%: *}"
-      if [[ -f "${DUMP_DIR}/${file_name}" ]] || [[ -d "${DUMP_DIR}/${file_name}" ]]; then
-        rm -vrf "${DUMP_DIR:?}/${file_name}"
-        sed -i '' "s|${file}||g" "${DUMP_LOG}"
-        sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
-      fi
+      rm -vrf "${DUMP_DIR:?}/${file_name}"
+      sed -i '' "s|${file}||g" "${DUMP_LOG}"
+      sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     done
   fi
 }
