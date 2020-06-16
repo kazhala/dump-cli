@@ -15,7 +15,6 @@
 #   --log: see all dumped files
 
 set -e
-set -f
 
 DUMP_DIR="${DUMP_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/dump/trash}"
 DUMP_LOG="${DUMP_LOG:-${XDG_DATA_HOME:-$HOME/.local/share}/dump/log}"
@@ -180,7 +179,7 @@ function clean() {
     [[ -z "${DUMP_CONFIRM}" ]] && \
       DUMP_CONFIRM=$(get_confirm "clean: delete all dumps?")
     [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
-    rm -vrf "${DUMP_DIR}"
+    rm -vrf "${DUMP_DIR}"/{*,.*??}
     truncate -s 0 "${DUMP_LOG}"
 
   else
