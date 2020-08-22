@@ -7,7 +7,6 @@
 #   DUMP_DIR: location to store trash
 #   DUMP_LOG: file to record all dumps
 #   action_comand: function to execute
-#   DUMP_CONFIRM: skip confirmation
 # Arguments
 #   --regret: revert a dump
 #   --put: put a file to dump
@@ -32,7 +31,7 @@ DUMP_LOG="${DUMP_LOG:-${XDG_DATA_HOME:-$HOME/.local/share}/dump/log}"
 function get_confirm() {
   local confirm
   local message="${1:-Confirm?}"
-  while [ "${confirm}" != 'y' ]  && [ "${confirm}" != 'n' ]; do
+  while [[ "${confirm}" != 'y' ]] && [[ "${confirm}" != 'n' ]]; do
     read -r -p "${message}(y/n): " confirm
   done
   echo "${confirm}"
@@ -41,17 +40,22 @@ function get_confirm() {
 #######################################
 # put a file dump
 # Arguments:
-#   -y|--yes: skip confirmation
-#   $*: all the command line argument are parsed as files to remove
+#   -h|--help: show help message and exit
+#   -i|--confirm: prompt confirmation on each file
+#   $*: all the no flag command line argument are parsed as files to remove
 # Example:
 #   dump --put foo.txt boo.txt
 #######################################
 function put() {
-  local files_to_remove=("$@") esc candidates=()
+  local files_to_remove=("$@") esc candidates=() confirm_prompt confirm_result
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -y|--yes)
-        DUMP_CONFIRM="y"
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -i|--confirm)
+        confirm_prompt="true"
         shift
         ;;
       *)
@@ -79,10 +83,11 @@ function put() {
   fi
 
   [[ "${#files_to_remove[@]}" -eq 0 ]] && exit 1
-  [[ -z "${DUMP_CONFIRM}" ]] && \
-    DUMP_CONFIRM=$(get_confirm "put: confirm dump?")
-  [[ "${DUMP_CONFIRM}" == 'n' ]] && exit 1
   for file in "${files_to_remove[@]}"; do
+    [[ -n "${confirm_prompt}" ]] \
+      && confirm_result=$(get_confirm "put: dump ${file}?") \
+      && [[ "${confirm_result}" != "y" ]] \
+      && continue
     mv -v "${file}" "${DUMP_DIR}"/
     sed -i '' "s|${file##*/}: $PWD/${file}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
@@ -93,15 +98,21 @@ function put() {
 #######################################
 # regret(undo) a file, move a file from dump to it's original location
 # Arguments:
-#   -y|--yes: proceed without confirm prompt
+#   -h|--help: show help message and exit
+#   -i|--confirm: prompt confirmation on each file
 #   -s|--select: use fzf to select a file to revert
+#   $*: all the no flag command line argument are parsed as files to regret
 #######################################
 function regret() {
-  local file_to_revert fuzzy files_to_revert=()
+  local file_to_revert fuzzy files_to_revert=() confirm_prompt confirm_result
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      -h|--help)
+        usage
+        exit 0
+        ;;
       -y|--yes)
-        DUMP_CONFIRM="y"
+        confirm_prompt="true"
         shift
         ;;
       -s|--select)
@@ -122,8 +133,10 @@ function regret() {
     file_line="$1"
     file_name="${file_line%%: *}"
     file_path="${file_line##*: }"
-    [[ -z "${DUMP_CONFIRM}" ]] && \
-      DUMP_CONFIRM=$(get_confirm "regret: reset ${file_name} to original location?")
+    [[ -n "${confirm_prompt}" ]] \
+      && confirm_result=$(get_confirm "put: dump ${file}?") \
+      && [[ "${confirm_result}" != "y" ]] \
+      && return
     sed -i '' "s|${file_to_revert}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     [[ ! -d "${file_path%/*}" ]] \
@@ -237,16 +250,20 @@ Optional arguments:
   -r, --regret\t\tundo removed files from trash location.
   -l, --log\t\tdisplay the trash log.
 
---put:
-  -y, --yes\t\tskip confirmation.
+--put [FILE]:
 
---regret:
-  -y, --yes\t\tskip confirmation.
-  -s, --select\t\tselect a file to undo.
+  dump files to ${DUMP_DIR}
 
+  Optional arguments:
+    -i, --confirm\t\tprompt confirmation before dumping each file.
 
+--regret [FILE]:
 
-"
+  undo files from "${DUMP_DIR}"
+
+  Optional arguments:
+    -i, --confirm\t\tprompt confirmation before dumping each file.
+    -s, --select\t\tselect a file to undo."
 }
 
 
