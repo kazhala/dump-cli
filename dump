@@ -41,9 +41,10 @@ function get_confirm() {
 #######################################
 # put a file dump
 # Arguments:
+#   -y|--yes: skip confirmation
 #   $*: all the command line argument are parsed as files to remove
 # Example:
-#   put foo.txt boo.txt
+#   dump --put foo.txt boo.txt
 #######################################
 function put() {
   local files_to_remove=("$@") esc candidates=()
@@ -90,14 +91,13 @@ function put() {
 }
 
 #######################################
-# regret a file, move a file from dump to 
-# it's original location
+# regret(undo) a file, move a file from dump to it's original location
 # Arguments:
 #   -y|--yes: proceed without confirm prompt
 #   -s|--select: use fzf to select a file to revert
 #######################################
 function regret() {
-  local files_removed=() file_name file_to_revert fuzzy files_to_revert=()
+  local files_removed=() file_name file_to_revert fuzzy files_to_revert=() 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -y|--yes)
@@ -109,13 +109,26 @@ function regret() {
         shift
         ;;
       *)
-        echo "Invalid option $1" 1>&2
-        exit 1
+        for file in "$@"; do
+          files_to_revert+=("${file}")
+        done
+        break
         ;;
     esac
   done
 
-  if [[ -n "${fuzzy}" ]]; then
+  if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
+    for file in "${files_to_revert[@]}"; do
+      file_to_revert=$(grep -xE "^$file:\s.*$" "${DUMP_LOG}")
+      [[ -z "${file_to_revert}" ]] \
+        && echo "File not found in dump log" \
+        && continue
+      mv -v "${DUMP_DIR}"/"${file_to_revert%%: *}" "${file_to_revert##*: }"
+      sed -i '' "s|${file_to_revert}||g" "${DUMP_LOG}"
+      sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+    done
+
+  elif [[ -n "${fuzzy}" ]]; then
     while IFS= read -r line; do
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
@@ -227,7 +240,18 @@ Optional arguments:
   -p FILE, --put FILE\tdump files to trash location.
   -c, --clean\t\tclean up trash location.
   -r, --regret\t\tundo removed files from trash location.
-  -l, --log\t\tdisplay the trash log."
+  -l, --log\t\tdisplay the trash log.
+
+--put:
+  -y, --yes\t\tskip confirmation.
+
+--regret:
+  -y, --yes\t\tskip confirmation.
+  -s, --select\t\tselect a file to undo.
+
+
+
+"
 }
 
 
