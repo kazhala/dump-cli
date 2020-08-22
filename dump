@@ -97,7 +97,7 @@ function put() {
 #   -s|--select: use fzf to select a file to revert
 #######################################
 function regret() {
-  local files_removed=() file_name file_to_revert fuzzy files_to_revert=() 
+  local file_to_revert fuzzy files_to_revert=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -y|--yes)
@@ -117,15 +117,27 @@ function regret() {
     esac
   done
 
+  _move_file() {
+    local file_name file_path file_line
+    file_line="$1"
+    file_name="${file_line%%: *}"
+    file_path="${file_line##*: }"
+    [[ -z "${DUMP_CONFIRM}" ]] && \
+      DUMP_CONFIRM=$(get_confirm "regret: reset ${file_name} to original location?")
+    sed -i '' "s|${file_to_revert}||g" "${DUMP_LOG}"
+    sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+    [[ ! -d "${file_path%/*}" ]] \
+      && mkdir -p "${file_path%/*}"
+    mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
+  }
+
   if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
     for file in "${files_to_revert[@]}"; do
       file_to_revert=$(grep -xE "^$file:\s.*$" "${DUMP_LOG}")
       [[ -z "${file_to_revert}" ]] \
         && echo "File not found in dump log" \
         && continue
-      mv -v "${DUMP_DIR}"/"${file_to_revert%%: *}" "${file_to_revert##*: }"
-      sed -i '' "s|${file_to_revert}||g" "${DUMP_LOG}"
-      sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+      _move_file "${file_to_revert}"
     done
 
   elif [[ -n "${fuzzy}" ]]; then
@@ -133,34 +145,17 @@ function regret() {
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
     [[ "${#files_to_revert[@]}" -eq 0 ]] && exit 1
-    [[ -z "${DUMP_CONFIRM}" ]] && \
-      DUMP_CONFIRM=$(get_confirm "regret: reset selected dumps to original location?")
     [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
-    for file in "${files_to_revert[@]}"; do
-      file_name="${file%%: *}"
-      if find "${DUMP_DIR}/${file_name}" &>/dev/null; then
-        mv -v "${DUMP_DIR}"/"${file_name}" "${file##*: }"
-        sed -i '' "s|${file}||g" "${DUMP_LOG}"
-        sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
-      fi
+    for file_to_revert in "${files_to_revert[@]}"; do
+      _move_file "${file_to_revert}"
     done
 
   else
-    while IFS= read -r line; do
-      file_name="${line%%: *}"
-      if find "${DUMP_DIR}/${file_name}" &>/dev/null; then
-        [[ -z "${file_to_revert}" ]] && \
-          file_to_revert="${line}" || \
-          files_removed+=("${line}")
-      fi
-    done < <(tac "${DUMP_LOG}")
-    [[ -z "${DUMP_CONFIRM}" ]] && \
-      DUMP_CONFIRM=$(get_confirm "regret: reset ${file_to_revert%%: *} to ${file_to_revert##*: }?")
-    [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
-    printf "%s\n" "${files_removed[@]}" | tac > "${DUMP_LOG}"
-    [[ -n "${file_to_revert}" ]] && \
-      mv -v "${DUMP_DIR}/${file_to_revert%%: *}" "${file_to_revert##*: }"
-    sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+    file_to_revert=$(tail -r -n 1 "${DUMP_LOG}")
+    [[ -z "${file_to_revert}" ]] \
+      && echo "No file to reset" \
+      && exit 1
+    _move_file "${file_to_revert}"
   fi
 }
 
