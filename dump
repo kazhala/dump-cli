@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# command line trash uitility
+# command line trash utility
 #
 # @params
 # Globals
@@ -91,7 +91,7 @@ function put() {
 
 #######################################
 # regret a file, move a file from dump to 
-# it's orignal location
+# it's original location
 # Arguments:
 #   -y|--yes: proceed without confirm prompt
 #   -s|--select: use fzf to select a file to revert
@@ -121,7 +121,7 @@ function regret() {
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
     [[ "${#files_to_revert[@]}" -eq 0 ]] && exit 1
     [[ -z "${DUMP_CONFIRM}" ]] && \
-      DUMP_CONFIRM=$(get_confirm "regret: reset selected dumps to orignal location?")
+      DUMP_CONFIRM=$(get_confirm "regret: reset selected dumps to original location?")
     [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
     for file in "${files_to_revert[@]}"; do
       file_name="${file%%: *}"
@@ -212,8 +212,31 @@ function log() {
     | less
 }
 
+#######################################
+# print usage of dump-cli
+#######################################
+function usage() {
+  echo -e "Usage: dump [-h] [-p] [-c] [-r] [-l] [FILES] [OPTIONS] ...
+
+A simple to use trash utility which persist the dumped file and it's original
+location for future undos. Integrated with fzf for interactive selection of the
+file to undo.
+
+Optional arguments:
+  -h, --help\t\tshow this help message and exit.
+  -p FILE, --put FILE\tdump files to trash location.
+  -c, --clean\t\tclean up trash location.
+  -r, --regret\t\tundo removed files from trash location.
+  -l, --log\t\tdisplay the trash log."
+}
+
+
 action_comand="put"
 case $1 in
+  --help|-h)
+    usage
+    exit 0
+    ;;
   --put|-p)
     action_comand="put"
     shift
