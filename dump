@@ -8,10 +8,11 @@
 #   DUMP_LOG: file to record all dumps
 #   action_comand: function to execute
 # Arguments
-#   --regret: revert a dump
-#   --put: put a file to dump
-#   --clean: clean all dumps
-#   --log: see all dumped files
+#   -r|--regret: revert a dump
+#   -p|--put: put a file to dump
+#   -c|--clean: clean all dumps
+#   -l|--log: see all dumped files
+#   -h|--help: show help and exit
 
 set -e
 
@@ -47,7 +48,7 @@ function get_confirm() {
 #   dump --put foo.txt boo.txt
 #######################################
 function put() {
-  local files_to_remove=("$@") esc candidates=() confirm_prompt confirm_result
+  local files_to_remove=() esc candidates=() confirm_prompt confirm_result fuzzy
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h|--help)
@@ -58,13 +59,18 @@ function put() {
         confirm_prompt="true"
         shift
         ;;
+      -s|--select)
+        fuzzy="true"
+        shift
+        ;;
       *)
+        files_to_remove=("$@")
         break
         ;;
     esac
   done
 
-  if [[ "${#files_to_remove[@]}" -eq 0 ]]; then
+  if [[ -n "${fuzzy}" ]]; then
     esc=$(printf '\033')
     while IFS= read -r line; do
       candidates+=("${esc}[34m${line}/${esc}[m")
@@ -83,6 +89,7 @@ function put() {
   fi
 
   [[ "${#files_to_remove[@]}" -eq 0 ]] && exit 1
+
   for file in "${files_to_remove[@]}"; do
     [[ -n "${confirm_prompt}" ]] \
       && confirm_result=$(get_confirm "put: dump ${file}?") \
@@ -237,7 +244,7 @@ function log() {
 # print usage of dump-cli
 #######################################
 function usage() {
-  echo -e "Usage: dump [-h] [-p] [-c] [-r] [-l] [FILES] [OPTIONS] ...
+  echo -e "Usage: dump [-h] [-p] [-c] [-r] [-l] [FILE] [OPTIONS] ...
 
 A simple to use trash utility which persist the dumped file and it's original
 location for future undos. Integrated with fzf for interactive selection of the
@@ -245,10 +252,11 @@ file to undo.
 
 Optional arguments:
   -h, --help\t\tshow this help message and exit.
-  -p FILE, --put FILE\tdump files to trash location.
+  -p , --put\t\tdump files to trash location.
   -c, --clean\t\tclean up trash location.
   -r, --regret\t\tundo removed files from trash location.
   -l, --log\t\tdisplay the trash log.
+
 
 --put [FILE]:
 
@@ -256,6 +264,12 @@ Optional arguments:
 
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before dumping each file.
+    -s, --select\t\tselect a file to delete through fzf.
+
+  Example:
+    dump --put hello.py hello.java src/* bin
+    dump --put --select
+
 
 --regret [FILE]:
 
@@ -263,7 +277,11 @@ Optional arguments:
 
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before dumping each file.
-    -s, --select\t\tselect a file to undo."
+    -s, --select\t\tselect a file to undo through fzf.
+
+  Example:
+    dump --regret hello.java hello.py bin
+    dump --regret --select"
 }
 
 
