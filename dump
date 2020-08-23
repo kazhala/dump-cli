@@ -92,7 +92,7 @@ function put() {
 
   for file in "${files_to_remove[@]}"; do
     [[ -n "${confirm_prompt}" ]] \
-      && confirm_result=$(get_confirm "put: dump ${file}?") \
+      && confirm_result=$(get_confirm "put: dump ${file} to ${DUMP_DIR}/${file##*/}?") \
       && [[ "${confirm_result}" != "y" ]] \
       && continue
     mv -v "${file}" "${DUMP_DIR}"/
@@ -111,14 +111,20 @@ function put() {
 #   $*: all the no flag command line argument are parsed as files to regret
 #######################################
 function regret() {
-  local file_to_revert fuzzy files_to_revert=() confirm_prompt confirm_result
+  local file_to_revert fuzzy confirm_prompt confirm_result regret_location files_to_revert
+  files_to_revert=()
+  regret_location="original"
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      -l|--local)
+        regret_location="local"
+        shift
+        ;;
       -h|--help)
         usage
         exit 0
         ;;
-      -y|--yes)
+      -i|--confirm)
         confirm_prompt="true"
         shift
         ;;
@@ -139,12 +145,24 @@ function regret() {
     local file_name file_path file_line
     file_line="$1"
     file_name="${file_line%%: *}"
-    file_path="${file_line##*: }"
+
+    case "${regret_location}" in
+      "original")
+        file_path="${file_line##*: }"
+        ;;
+      "local")
+        file_path="$PWD"
+        ;;
+      *)
+        file_path="${file_line##*: }"
+        ;;
+    esac
+
     [[ -n "${confirm_prompt}" ]] \
-      && confirm_result=$(get_confirm "put: dump ${file}?") \
+      && confirm_result=$(get_confirm "regret: reset ${file_name} to ${file_path}?") \
       && [[ "${confirm_result}" != "y" ]] \
       && return
-    sed -i '' "s|${file_to_revert}||g" "${DUMP_LOG}"
+    sed -i '' "s|${file_line}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     [[ ! -d "${file_path%/*}" ]] \
       && mkdir -p "${file_path%/*}"
@@ -165,7 +183,6 @@ function regret() {
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
     [[ "${#files_to_revert[@]}" -eq 0 ]] && exit 1
-    [[ "${DUMP_CONFIRM}" != 'y' ]] && exit 1
     for file_to_revert in "${files_to_revert[@]}"; do
       _move_file "${file_to_revert}"
     done
