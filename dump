@@ -48,7 +48,9 @@ function get_confirm() {
 #   dump --put foo.txt boo.txt
 #######################################
 function put() {
-  local files_to_remove=() esc candidates=() confirm_prompt confirm_result fuzzy
+  local files_to_remove esc candidates confirm_prompt confirm_result fuzzy file_entry dup_count
+  files_to_remove=()
+  candidates=()
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -h|--help)
@@ -95,10 +97,15 @@ function put() {
       && confirm_result=$(get_confirm "put: dump ${file} to ${DUMP_DIR}/${file##*/}?") \
       && [[ "${confirm_result}" != "y" ]] \
       && continue
-    mv -v "${file}" "${DUMP_DIR}"/
-    sed -i '' "s|${file##*/}: $PWD/${file}||g" "${DUMP_LOG}"
+
+    dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
+    dup_count=$((dup_count + 1))
+
+    file_entry="${file##*/}-${dup_count}: $PWD/${file}"
+    mv -v "${file}" "${DUMP_DIR}"/"${file##*/}-${dup_count}"
+    sed -i '' "s|${file_entry}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
-    echo "${file##*/}: $PWD/${file}" >> "${DUMP_LOG}"
+    echo "${file_entry}" >> "${DUMP_LOG}"
   done
 }
 
@@ -150,7 +157,7 @@ function regret() {
         file_path="${file_line##*: }"
         ;;
       "local")
-        file_path="$PWD"
+        file_path="$PWD/${file_name%%-*}"
         ;;
       *)
         file_path="${file_line##*: }"
@@ -165,12 +172,14 @@ function regret() {
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     [[ ! -d "${file_path%/*}" ]] \
       && mkdir -p "${file_path%/*}"
+    [[ -d "${file_path}" ]] \
+      && rm -rf "${file_path}"
     mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
   }
 
   if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
     for file in "${files_to_revert[@]}"; do
-      file_to_revert=$(grep -xE "^$file:\s.*$" "${DUMP_LOG}" | tail -r -n 1)
+      file_to_revert=$(grep -xE "^$file.*$" "${DUMP_LOG}" | tail -r -n 1)
       [[ -z "${file_to_revert}" ]] \
         && echo "File not found in dump log" \
         && continue
@@ -198,8 +207,9 @@ function regret() {
 #######################################
 # clean the dump folder and log
 # Arguments:
-#   -y|--yes: proceed without confirm prompt
+#   -i|--confirm: prompt confirmation before permanently remove
 #   -s|--select: use fzf to select a file to revert
+#   $*: all the no flag command line argument are parsed as files to clean
 #######################################
 function clean() {
   local fuzzy files_to_clean file_to_clean confirm_prompt confirm_result file_path file_name
@@ -227,7 +237,7 @@ function clean() {
 
   if [[ "${#files_to_clean[@]}" -gt 0 ]]; then
     for file in "${files_to_clean[@]}"; do
-      file_to_clean=$(grep -xE "^$file:\s.*$" "${DUMP_LOG}" | tail -r -n 1)
+      file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | tail -r -n 1)
       file_name="${file_to_clean%%: *}"
       file_path="${file_to_clean##*: }"
       [[ -z "${files_to_clean}" ]] \
