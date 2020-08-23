@@ -108,6 +108,7 @@ function put() {
 #   -h|--help: show help message and exit
 #   -i|--confirm: prompt confirmation on each file
 #   -s|--select: use fzf to select a file to revert
+#   -l|--local: reset file to current location
 #   $*: all the no flag command line argument are parsed as files to regret
 #######################################
 function regret() {
@@ -133,9 +134,7 @@ function regret() {
         shift
         ;;
       *)
-        for file in "$@"; do
-          files_to_revert+=("${file}")
-        done
+        files_to_revert=("$@")
         break
         ;;
     esac
@@ -295,6 +294,7 @@ Optional arguments:
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before dumping each file.
     -s, --select\t\tselect a file to undo through fzf.
+    -l, --local\t\treset file to current location.
 
   Example:
     dump --regret hello.java hello.py bin
