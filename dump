@@ -214,6 +214,10 @@ function clean() {
         fuzzy="true"
         shift
         ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
       *)
         files_to_clean=("$@")
         break
@@ -238,7 +242,7 @@ function clean() {
       rm -vrf "${DUMP_DIR:?}/${file_name}"
     done
 
-  elif [[ -n "${fuzzy}" ]]; then
+  elif [[ -z "${fuzzy}" ]]; then
     [[ -n "${confirm_prompt}" ]] \
       && confirm_result=$(get_confirm "clean: permanently delete all dumps?") \
       && [[ "${confirm_result}" != "y" ]] \
@@ -320,12 +324,14 @@ Optional arguments:
     dump --regret hello.java hello.py bin
     dump --regret --select
 
+
 --clean [FILE]:
 
   permanently remove files from ${DUMP_DIR}
 
   Optional arguments:
-    -"
+    -i, --confirm\t\tprompt confirmation before permanently remove file.
+    -s, --select\t\tselect a file to permanently delete through fzf."
 }
 
 
