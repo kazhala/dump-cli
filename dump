@@ -205,7 +205,7 @@ function regret() {
   elif [[ -n "${fuzzy}" ]]; then
     while IFS= read -r line; do
       files_to_revert+=("${line}")
-    done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
+    done < <(_list_dumps)
     [[ "${#files_to_revert[@]}" -eq 0 ]] && exit 1
     for file_to_revert in "${files_to_revert[@]}"; do
       _move_file "${file_to_revert}"
@@ -218,6 +218,20 @@ function regret() {
       && exit 1
     _move_file "${file_to_revert}"
   fi
+}
+
+#######################################
+# list all dumps from log file with color through fzf
+# Outputs:
+#   the selected dumps
+#   e.g. hello.py: ~/Desktop/hello.py
+#######################################
+function _list_dumps() {
+  local all_dumps esc
+  all_dumps=$(tac "${DUMP_LOG}" | awk 'NF')
+  esc=$(printf '\033')
+  sed "s|^\\(.*\\): \\(.*\\)$|${esc}[32m\\1: ${esc}[36m\\2|" <(echo "${all_dumps}") \
+    | fzf --multi --exit-0 --ansi
 }
 
 #######################################
@@ -279,7 +293,7 @@ function clean() {
   else
     while IFS= read -r line; do
       files_to_clean+=("${line}")
-    done < <(tac "${DUMP_LOG}" | awk 'NF' | fzf --multi --exit-0)
+    done < <(_list_dumps)
     [[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
     for file in "${files_to_clean[@]}"; do
       file_name="${file%%: *}"
