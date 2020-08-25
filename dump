@@ -353,12 +353,13 @@ Optional arguments:
 
 --regret [FILE]:
 
-  undo files from ${DUMP_DIR}
+  undo/reset files from ${DUMP_DIR}
 
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before dumping each file.
     -s, --select\t\tselect a file to undo through fzf.
     -l, --local\t\treset file to current location.
+    -f, --force\t\tforce overwrite even if undo file already existed.
 
   Example:
     dump --regret hello.java hello.py bin
@@ -371,7 +372,18 @@ Optional arguments:
 
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before permanently remove file.
-    -s, --select\t\tselect a file to permanently delete through fzf."
+    -s, --select\t\tselect a file to permanently delete through fzf.
+
+  Example:
+    dump --clean hello.java hello.py *.js
+    dump --clean --select --confirm
+
+--log:
+
+  list all dumps
+
+  Optional arguments:
+    -p, --pager\t\tuse less as a pager to display output."
 }
 
 
