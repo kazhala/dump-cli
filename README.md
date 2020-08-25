@@ -10,7 +10,7 @@ trash utility that could be used as a replacement of `rm`.
 Features:
 
 - dump files (remove files)
-- regret files (undo dumped files, select through fzf)
+- undo files (reset dumped files to original location or current location, select through fzf)
 - clean files (permanently remove dumped files, select through fzf)
 - log (view dumped files)
 

@@ -8,7 +8,7 @@
 #   DUMP_LOG: file to record all dumps
 #   action_comand: function to execute
 # Arguments
-#   -r|--regret: revert a dump
+#   -u|--undo: revert a dump
 #   -p|--put: put a file to dump
 #   -c|--clean: clean all dumps
 #   -l|--log: see all dumped files
@@ -359,7 +359,7 @@ Optional arguments:
   -h, --help\t\tshow this help message and exit.
   -p , --put\t\tdump files to trash location.
   -c, --clean\t\tclean up trash location.
-  -u, --regret\t\tundo removed files from trash location.
+  -u, --undo\t\tundo removed files from trash location.
   -l, --log\t\tdisplay the trash log.
 
 
@@ -376,7 +376,7 @@ Optional arguments:
     dump --put --select
 
 
---regret [FILE]:
+--undo [FILE]:
 
   undo/reset files from ${DUMP_DIR}
 
@@ -387,8 +387,8 @@ Optional arguments:
     -f, --force\t\tforce overwrite even if undo file already existed.
 
   Example:
-    dump --regret hello.java hello.py bin
-    dump --regret --select
+    dump --undo hello.java hello.py bin
+    dump --undo --select
 
 
 --clean [FILE]:
@@ -426,7 +426,7 @@ case $1 in
     action_comand="clean"
     shift
     ;;
-  --regret|-u)
+  --undo|-u)
     action_comand='regret'
     shift
     ;;
