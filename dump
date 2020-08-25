@@ -298,12 +298,26 @@ function clean() {
 # using a pager to list all dumps
 #######################################
 function log() {
+  local pager
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -p|--pager)
+        pager="true"
+        shift
+        ;;
+    esac
+  done
+
   tac "${DUMP_LOG}" \
     | awk -F ":" '
         BEGIN { printf "%-31s %-40s\n", "Name", "Location" }
         { printf "%-30s %-40s\n", $1, $2}
       ' \
-    | less
+    | ([[ -n "${pager}" ]] && less || cat)
 }
 
 #######################################
