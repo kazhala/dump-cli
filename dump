@@ -123,7 +123,7 @@ function put() {
 #   $*: all the no flag command line argument are parsed as files to regret
 #######################################
 function regret() {
-  local file_to_revert fuzzy confirm_prompt confirm_result regret_location files_to_revert
+  local file_to_revert fuzzy confirm_prompt confirm_result regret_location files_to_revert force_overwrite
   files_to_revert=()
   regret_location="original"
   while [[ $# -gt 0 ]]; do
@@ -142,6 +142,10 @@ function regret() {
         ;;
       -s|--select)
         fuzzy="true"
+        shift
+        ;;
+      -f|--force)
+        force_overwrite="true"
         shift
         ;;
       *)
@@ -172,12 +176,15 @@ function regret() {
       && confirm_result=$(get_confirm "regret: reset ${file_name} to ${file_path}?") \
       && [[ "${confirm_result}" != "y" ]] \
       && return
+    [[ -e "${file_path}" ]] \
+      && [[ -z "${force_overwrite}" ]] \
+      && echo "${file_path} already exits" >&2 \
+      && exit 1
+
     sed -i '' "s|${file_line}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     [[ ! -d "${file_path%/*}" ]] \
       && mkdir -p "${file_path%/*}"
-    [[ -d "${file_path}" ]] \
-      && rm -rf "${file_path}"
     mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
   }
 
