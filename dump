@@ -76,10 +76,10 @@ function put() {
     esc=$(printf '\033')
     while IFS= read -r line; do
       candidates+=("${esc}[34m${line}/${esc}[m")
-    done < <(find -s . -maxdepth 1 -mindepth 1 -type d -exec basename {} +)
+    done < <(find -s . -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I __ basename __)
     while IFS= read -r line; do
       candidates+=("${line}")
-    done < <(find -s . -maxdepth 1 -mindepth 1 -type f -exec basename {} +)
+    done < <(find -s . -maxdepth 1 -mindepth 1 -type f -print0 | xargs -0 -I __ basename __)
 
     while IFS= read -r line; do
       files_to_remove+=("${line}")
@@ -99,10 +99,14 @@ function put() {
       && continue
 
     dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
-    dup_count=$((dup_count + 1))
-
-    file_entry="${file##*/}-${dup_count}: $PWD/${file}"
-    mv -v "${file}" "${DUMP_DIR}"/"${file##*/}-${dup_count}"
+    dup_count=$((dup_count))
+    if [[ "${dup_count}" -eq 0 ]]; then
+      file_entry="${file##*/}: $PWD/${file}"
+      mv -v "${file}" "${DUMP_DIR}"/"${file##*/}"
+    else
+      file_entry="${file##*/}-${dup_count}: $PWD/${file}"
+      mv -v "${file}" "${DUMP_DIR}"/"${file##*/}-${dup_count}"
+    fi
     sed -i '' "s|${file_entry}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
     echo "${file_entry}" >> "${DUMP_LOG}"
