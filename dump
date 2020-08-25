@@ -176,10 +176,15 @@ function regret() {
       && confirm_result=$(get_confirm "regret: reset ${file_name} to ${file_path}?") \
       && [[ "${confirm_result}" != "y" ]] \
       && return
-    [[ -e "${file_path}" ]] \
-      && [[ -z "${force_overwrite}" ]] \
-      && echo "${file_path} already exits" >&2 \
-      && exit 1
+
+    if [[ -z "${force_overwrite}" ]]; then
+      [[ -e "${file_path}" ]] \
+        && echo "${file_path} already exits" >&2 \
+        && exit 1
+    else
+      [[ -e "${file_path}" ]] \
+        && rm -rf "${file_path}"
+    fi
 
     sed -i '' "s|${file_line}||g" "${DUMP_LOG}"
     sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
