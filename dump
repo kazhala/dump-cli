@@ -48,7 +48,7 @@ function get_confirm() {
 #   dump --put foo.txt boo.txt
 #######################################
 function put() {
-  local files_to_remove esc candidates confirm_prompt confirm_result fuzzy file_entry dup_count
+  local files_to_remove esc candidates confirm_prompt confirm_result fuzzy file_entry dup_count recursive
   files_to_remove=()
   candidates=()
   while [[ $# -gt 0 ]]; do
@@ -56,6 +56,10 @@ function put() {
       -h|--help)
         usage
         exit 0
+        ;;
+      -r|--recursive)
+        recursive="true"
+        shift
         ;;
       -i|--confirm)
         confirm_prompt="true"
@@ -73,10 +77,13 @@ function put() {
   done
 
   if [[ -n "${fuzzy}" ]]; then
-    esc=$(printf '\033')
-    while IFS= read -r line; do
-      candidates+=("${esc}[34m${line}/${esc}[m")
-    done < <(find -s . -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I __ basename __)
+    if [[ -n "${recursive}" ]]; then
+      esc=$(printf '\033')
+      while IFS= read -r line; do
+        candidates+=("${esc}[34m${line}/${esc}[m")
+      done < <(find -s . -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I __ basename __)
+    fi
+
     while IFS= read -r line; do
       candidates+=("${line}")
     done < <(find -s . -maxdepth 1 -mindepth 1 -type f -print0 | xargs -0 -I __ basename __)
@@ -96,6 +103,10 @@ function put() {
     [[ -n "${confirm_prompt}" ]] \
       && confirm_result=$(get_confirm "put: dump ${file} to ${DUMP_DIR}/${file##*/}?") \
       && [[ "${confirm_result}" != "y" ]] \
+      && continue
+
+    [[ -d "${file}" ]] && [[ -z "${recursive}" ]] \
+      && echo "put: ${file} is a directory" \
       && continue
 
     dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
@@ -348,7 +359,7 @@ Optional arguments:
   -h, --help\t\tshow this help message and exit.
   -p , --put\t\tdump files to trash location.
   -c, --clean\t\tclean up trash location.
-  -r, --regret\t\tundo removed files from trash location.
+  -u, --regret\t\tundo removed files from trash location.
   -l, --log\t\tdisplay the trash log.
 
 
@@ -415,7 +426,7 @@ case $1 in
     action_comand="clean"
     shift
     ;;
-  --regret|-r)
+  --regret|-u)
     action_comand='regret'
     shift
     ;;
