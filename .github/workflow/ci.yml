@@ -1,0 +1,17 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-18.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install shellcheck
+        run: sudo apt-get install shellcheck -y
+      - name: Lint with shellcheck
+        run: shellcheck dump
