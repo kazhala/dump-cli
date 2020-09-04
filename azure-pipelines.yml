@@ -6,6 +6,9 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/master')]
+
 stages:
   - stage: lint
     jobs:
@@ -15,3 +18,17 @@ stages:
             displayName: 'Install shellcheck'
           - bash: shellcheck dump
             displayName: 'Running shellcheck'
+            
+  - stage: docker
+    condition: and(succeeded(), eq(variables.isMain, true))
+    jobs:
+      - job: build
+        steps:
+          - task: DockerInstaller@0
+            inputs:
+              dockerVersion: '17.09.0-ce'
+          - task: Docker@2
+            inputs:
+              command: 'build'
+              Dockerfile: '**/Dockerfile'
+          
