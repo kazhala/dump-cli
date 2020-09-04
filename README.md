@@ -1,5 +1,7 @@
 # dump-cli
 
+[![Build Status](https://dev.azure.com/12915296/dump-cli/_apis/build/status/kazhala.dump-cli?branchName=master)](https://dev.azure.com/12915296/dump-cli/_build/latest?definitionId=5&branchName=master)
+
 dump-cli is a simple trash utility written in bash while also integrated
 with fzf for an interactive experience.
 
