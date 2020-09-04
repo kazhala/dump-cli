@@ -19,25 +19,33 @@ stages:
           - bash: sudo apt-get install shellcheck
             displayName: 'Install shellcheck'
           - bash: shellcheck dump
-            displayName: 'Running shellcheck'
+            displayName: 'Run shellcheck'
 
-  - stage: docker
+  - stage: deploy
     condition: and(succeeded(), eq(variables.isMain, true))
     jobs:
-      - job: build
+      - job: docker
         steps:
           - task: DockerInstaller@0
             inputs:
               dockerVersion: '17.09.0-ce'
           - task: Docker@2
+            displayName: 'Build docker image'
             inputs:
               command: 'build'
               Dockerfile: 'Dockerfile'
-
-      - job: deploy
-        steps::
-          - env:
+              repository: kazhala/dump
+              tags: |
+                $(Build.BuildId)
+                latest
+          - bash: 'echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin'
+            displayName: 'Login to DockerHub'
+            env:
               DOCKER_USERNAME: $(docker-username)
               DOCKER_PASSWORD: $(docker-password)
-            displayName: 'Login to DockerHub'
-            bash: 'echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin'
+          - bash: 'docker image push kazhala/dump:$DOCKER_TAG'
+            displayName: 'Deploy image to DockerHub'
+            env:
+              DOCKER_TAG: $(Build.BuildId)
+          - bash: docker image push kazhala/dump:latest
+            displayName: 'Update the latest tag'
