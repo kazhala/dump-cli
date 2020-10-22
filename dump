@@ -118,8 +118,8 @@ function put() {
       file_entry="${file##*/}-${dup_count}: $PWD/${file}"
       mv -v "${file}" "${DUMP_DIR}/${file##*/}-${dup_count}"
     fi
-    sed -i '' "s|${file_entry}||g" "${DUMP_LOG}"
-    sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+    sed -i "s|${file_entry}||g" "${DUMP_LOG}"
+    sed -i '/^[[:space:]]*$/d' "${DUMP_LOG}"
     echo "${file_entry}" >> "${DUMP_LOG}"
   done
 }
@@ -205,8 +205,8 @@ function undo() {
         && rm -rf "${file_path}"
     fi
 
-    sed -i '' "s|${file_line}||g" "${DUMP_LOG}"
-    sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+    sed -i "s|${file_line}||g" "${DUMP_LOG}"
+    sed -i '/^[[:space:]]*$/d' "${DUMP_LOG}"
     [[ ! -d "${file_path%/*}" ]] \
       && mkdir -p "${file_path%/*}"
     mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
@@ -214,7 +214,7 @@ function undo() {
 
   if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
     for file in "${files_to_revert[@]}"; do
-      file_to_revert=$(grep -xE "^$file.*$" "${DUMP_LOG}" | tail -r -n 1)
+      file_to_revert=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
       [[ -z "${file_to_revert}" ]] \
         && echo "File not found in dump log" \
         && continue
@@ -233,7 +233,7 @@ function undo() {
   else
     while IFS= read -r line; do
       files_to_revert+=("${line}")
-    done < <(tail -r -n "${revert_count}" "${DUMP_LOG}")
+    done < <(tac "${DUMP_LOG}" | head -"${revert_count}")
     [[ "${#files_to_revert[@]}" -eq 0 ]] \
       && echo "No file to reset" \
       && exit 1
@@ -290,7 +290,7 @@ function clean() {
 
   if [[ "${#files_to_clean[@]}" -gt 0 ]]; then
     for file in "${files_to_clean[@]}"; do
-      file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | tail -r -n 1)
+      file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
       file_name="${file_to_clean%%: *}"
       file_path="${file_to_clean##*: }"
       [[ -z "${file_to_clean}" ]] \
@@ -300,8 +300,8 @@ function clean() {
         && confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") \
         && [[ "${confirm_result}" != "y" ]] \
         && exit 0
-      sed -i '' "s|${file_to_clean}||g" "${DUMP_LOG}"
-      sed -i '' "/^[[:space:]]*$/d" "${DUMP_LOG}"
+      sed -i "s|${file_to_clean}||g" "${DUMP_LOG}"
+      sed -i "/^[[:space:]]*$/d" "${DUMP_LOG}"
       rm -vrf "${DUMP_DIR:?}/${file_name}"
     done
 
@@ -324,8 +324,8 @@ function clean() {
         && confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") \
         && [[ "${confirm_result}" != "y" ]] \
         && continue
-      sed -i '' "s|${file}||g" "${DUMP_LOG}"
-      sed -i '' '/^[[:space:]]*$/d' "${DUMP_LOG}"
+      sed -i "s|${file}||g" "${DUMP_LOG}"
+      sed -i '/^[[:space:]]*$/d' "${DUMP_LOG}"
       rm -vrf "${DUMP_DIR:?}/${file_name}"
     done
   fi
