@@ -81,12 +81,12 @@ function put() {
       esc=$(printf '\033')
       while IFS= read -r line; do
         candidates+=("${esc}[34m${line}/${esc}[m")
-      done < <(find -s . -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I __ basename __)
+      done < <(find . -maxdepth 1 -mindepth 1 -type d -print0 | sort -z | xargs -0 -I __ basename __)
     fi
 
     while IFS= read -r line; do
       candidates+=("${line}")
-    done < <(find -s . -maxdepth 1 -mindepth 1 -type f -print0 | xargs -0 -I __ basename __)
+    done < <(find . -maxdepth 1 -mindepth 1 -type f -print0 | sort -z | xargs -0 -I __ basename __)
 
     while IFS= read -r line; do
       files_to_remove+=("${line}")
