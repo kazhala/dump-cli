@@ -7,6 +7,7 @@
 #   DUMP_DIR: location to store trash
 #   DUMP_LOG: file to record all dumps
 #   action_comand: function to execute
+#   SED_ARG: argument for sed inplace editing
 # Arguments
 #   -u|--undo: revert a dump
 #   -p|--put: put a file to dump
@@ -252,14 +253,16 @@ function undo() {
 # list all dumps from log file with color through fzf
 # Outputs:
 #   the selected dumps
-#   e.g. hello.py: ~/Desktop/hello.py
+#   e.g. hello.py -> ~/Desktop/hello.py
 #######################################
 function _list_dumps() {
   local all_dumps esc
-  all_dumps=$(tac "${DUMP_LOG}" | awk 'NF')
+  all_dumps=$(tac "${DUMP_LOG}")
   esc=$(printf '\033')
-  sed "s|^\\(.*\\): \\(.*\\)$|${esc}[32m\\1: ${esc}[36m\\2|" <(echo "${all_dumps}") \
-    | fzf --multi --exit-0 --ansi
+  sed "s|^\\(.*\\)<:::>\\(.*\\)$|${esc}[32m\\1 ${esc}[0m-> ${esc}[36m\\2|g" <(echo "${all_dumps}") \
+    | awk 'NF' \
+    | fzf --multi --exit-0 --ansi \
+    | sed "s|\\(.*\\) -> \\(.*\\)|\\1<:::>\\2|g"
 }
 
 #######################################
