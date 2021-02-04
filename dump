@@ -118,10 +118,10 @@ function put() {
     dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
     dup_count=$((dup_count))
     if [[ "${dup_count}" -eq 0 ]]; then
-      file_entry="${file##*/}: $PWD/${file}"
+      file_entry="${file##*/}<:::>$PWD/${file}"
       mv -v "${file}" "${DUMP_DIR}"/"${file##*/}"
     else
-      file_entry="${file##*/}-${dup_count}: $PWD/${file}"
+      file_entry="${file##*/}-${dup_count}<:::>$PWD/${file}"
       mv -v "${file}" "${DUMP_DIR}/${file##*/}-${dup_count}"
     fi
     sed "${SED_ARG[@]}" "s|${file_entry}||g" "${DUMP_LOG}"
@@ -183,17 +183,17 @@ function undo() {
   _move_file() {
     local file_name file_path file_line
     file_line="$1"
-    file_name="${file_line%%: *}"
+    file_name="${file_line%%<:::>*}"
 
     case "${undo_location}" in
       "original")
-        file_path="${file_line##*: }"
+        file_path="${file_line##*<:::>}"
         ;;
       "local")
         file_path="$PWD/${file_name%%-*}"
         ;;
       *)
-        file_path="${file_line##*: }"
+        file_path="${file_line##*<:::>}"
         ;;
     esac
 
@@ -231,7 +231,9 @@ function undo() {
     while IFS= read -r line; do
       files_to_revert+=("${line}")
     done < <(_list_dumps)
-    [[ "${#files_to_revert[@]}" -eq 0 ]] && exit 1
+    [[ "${#files_to_revert[@]}" -eq 0 ]] \
+      && echo "No file to undo" \
+      && exit 1
     for file_to_revert in "${files_to_revert[@]}"; do
       _move_file "${file_to_revert}"
     done
@@ -241,7 +243,7 @@ function undo() {
       files_to_revert+=("${line}")
     done < <(tac "${DUMP_LOG}" | head -"${revert_count}")
     [[ "${#files_to_revert[@]}" -eq 0 ]] \
-      && echo "No file to reset" \
+      && echo "No file to undo" \
       && exit 1
     for file_to_revert in "${files_to_revert[@]}"; do
       _move_file "${file_to_revert}"
@@ -299,8 +301,8 @@ function clean() {
   if [[ "${#files_to_clean[@]}" -gt 0 ]]; then
     for file in "${files_to_clean[@]}"; do
       file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
-      file_name="${file_to_clean%%: *}"
-      file_path="${file_to_clean##*: }"
+      file_name="${file_to_clean%%<:::>*}"
+      file_path="${file_to_clean##*<:::>}"
       [[ -z "${file_to_clean}" ]] \
         && echo "File not found in dump log" \
         && continue
@@ -327,7 +329,7 @@ function clean() {
     done < <(_list_dumps)
     [[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
     for file in "${files_to_clean[@]}"; do
-      file_name="${file%%: *}"
+      file_name="${file%%<:::>*}"
       [[ -n "${confirm_prompt}" ]] \
         && confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") \
         && [[ "${confirm_result}" != "y" ]] \
@@ -358,7 +360,7 @@ function log() {
   done
 
   tac "${DUMP_LOG}" \
-    | awk -F ":" '
+    | awk -F "<:::>" '
         BEGIN { printf "%-31s %-40s\n", "Name", "Location" }
         { printf "%-30s %-40s\n", $1, $2}
       ' \
