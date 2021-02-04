@@ -99,11 +99,14 @@ function put() {
     done < <(
       IFS=$'\n'
       echo "${candidates[*]}" \
+        | awk 'NF' \
         | fzf --ansi --exit-0 --multi --exit-0
     )
   fi
 
-  [[ "${#files_to_remove[@]}" -eq 0 ]] && exit 1
+  [[ "${#files_to_remove[@]}" -eq 0 ]] \
+    && echo "No file to remove" \
+    && exit 1
 
   for file in "${files_to_remove[@]}"; do
     [[ -n "${confirm_prompt}" ]] \
