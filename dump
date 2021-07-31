@@ -25,7 +25,7 @@ DUMP_LOG="${DUMP_LOG:-${XDG_DATA_HOME:-$HOME/.local/share}/dump/log}"
 
 SED_ARG=("-i")
 if [[ "$OSTYPE" =~ "darwin" ]]; then
-  SED_ARG=("-i" "")
+	SED_ARG=("-i" "")
 fi
 
 #######################################
@@ -36,12 +36,12 @@ fi
 #   y/n: out put either y or n as user confirm status
 #######################################
 function get_confirm() {
-  local confirm
-  local message="${1:-Confirm?}"
-  while [[ "${confirm}" != 'y' ]] && [[ "${confirm}" != 'n' ]]; do
-    read -r -p "${message}(y/n): " confirm
-  done
-  echo "${confirm}"
+	local confirm
+	local message="${1:-Confirm?}"
+	while [[ "${confirm}" != 'y' ]] && [[ "${confirm}" != 'n' ]]; do
+		read -r -p "${message}(y/n): " confirm
+	done
+	echo "${confirm}"
 }
 
 #######################################
@@ -54,83 +54,83 @@ function get_confirm() {
 #   dump --put foo.txt boo.txt
 #######################################
 function put() {
-  local files_to_remove esc candidates confirm_prompt confirm_result fuzzy file_entry dup_count recursive
-  files_to_remove=()
-  candidates=()
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      -r|--recursive)
-        recursive="true"
-        shift
-        ;;
-      -i|--confirm)
-        confirm_prompt="true"
-        shift
-        ;;
-      -s|--select)
-        fuzzy="true"
-        shift
-        ;;
-      *)
-        files_to_remove=("$@")
-        break
-        ;;
-    esac
-  done
+	local files_to_remove esc candidates confirm_prompt confirm_result fuzzy file_entry dup_count recursive
+	files_to_remove=()
+	candidates=()
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-h | --help)
+			usage
+			exit 0
+			;;
+		-r | --recursive)
+			recursive="true"
+			shift
+			;;
+		-i | --confirm)
+			confirm_prompt="true"
+			shift
+			;;
+		-s | --select)
+			fuzzy="true"
+			shift
+			;;
+		*)
+			files_to_remove=("$@")
+			break
+			;;
+		esac
+	done
 
-  if [[ -n "${fuzzy}" ]]; then
-    if [[ -n "${recursive}" ]]; then
-      esc=$(printf '\033')
-      while IFS= read -r line; do
-        candidates+=("${esc}[34m${line}/${esc}[m")
-      done < <(find . -maxdepth 1 -mindepth 1 -type d -print0 | sort -z | xargs -0 -I __ basename __)
-    fi
+	if [[ -n "${fuzzy}" ]]; then
+		if [[ -n "${recursive}" ]]; then
+			esc=$(printf '\033')
+			while IFS= read -r line; do
+				candidates+=("${esc}[34m${line}/${esc}[m")
+			done < <(find . -maxdepth 1 -mindepth 1 -type d -print0 | sort -z | xargs -0 -I __ basename __)
+		fi
 
-    while IFS= read -r line; do
-      candidates+=("${line}")
-    done < <(find . -maxdepth 1 -mindepth 1 -type f -print0 | sort -z | xargs -0 -I __ basename __)
+		while IFS= read -r line; do
+			candidates+=("${line}")
+		done < <(find . -maxdepth 1 -mindepth 1 -type f -print0 | sort -z | xargs -0 -I __ basename __)
 
-    while IFS= read -r line; do
-      files_to_remove+=("${line}")
-    done < <(
-      IFS=$'\n'
-      echo "${candidates[*]}" \
-        | awk 'NF' \
-        | fzf --ansi --exit-0 --multi --exit-0
-    )
-  fi
+		while IFS= read -r line; do
+			files_to_remove+=("${line}")
+		done < <(
+			IFS=$'\n'
+			echo "${candidates[*]}" |
+				awk 'NF' |
+				fzf --ansi --exit-0 --multi --exit-0
+		)
+	fi
 
-  [[ "${#files_to_remove[@]}" -eq 0 ]] \
-    && echo "No file to remove" \
-    && exit 1
+	[[ "${#files_to_remove[@]}" -eq 0 ]] &&
+		echo "No file to remove" &&
+		exit 1
 
-  for file in "${files_to_remove[@]}"; do
-    [[ -n "${confirm_prompt}" ]] \
-      && confirm_result=$(get_confirm "put: dump ${file} to ${DUMP_DIR}/${file##*/}?") \
-      && [[ "${confirm_result}" != "y" ]] \
-      && continue
+	for file in "${files_to_remove[@]}"; do
+		[[ -n "${confirm_prompt}" ]] &&
+			confirm_result=$(get_confirm "put: dump ${file} to ${DUMP_DIR}/${file##*/}?") &&
+			[[ "${confirm_result}" != "y" ]] &&
+			continue
 
-    [[ -d "${file}" ]] && [[ -z "${recursive}" ]] \
-      && echo "put: ${file} is a directory" \
-      && continue
+		[[ -d "${file}" ]] && [[ -z "${recursive}" ]] &&
+			echo "put: ${file} is a directory" &&
+			continue
 
-    dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
-    dup_count=$((dup_count))
-    if [[ "${dup_count}" -eq 0 ]]; then
-      file_entry="${file##*/}<:::>$PWD/${file}"
-      mv -v "${file}" "${DUMP_DIR}"/"${file##*/}"
-    else
-      file_entry="${file##*/}-${dup_count}<:::>$PWD/${file}"
-      mv -v "${file}" "${DUMP_DIR}/${file##*/}-${dup_count}"
-    fi
-    sed "${SED_ARG[@]}" "s|${file_entry}||g" "${DUMP_LOG}"
-    sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
-    echo "${file_entry}" >> "${DUMP_LOG}"
-  done
+		dup_count=$(find "${DUMP_DIR}"/ -maxdepth 1 -mindepth 1 -name "${file##*/}*" | wc -l)
+		dup_count=$((dup_count))
+		if [[ "${dup_count}" -eq 0 ]]; then
+			file_entry="${file##*/}<:::>$PWD/${file}"
+			mv -v "${file}" "${DUMP_DIR}"/"${file##*/}"
+		else
+			file_entry="${file##*/}-${dup_count}<:::>$PWD/${file}"
+			mv -v "${file}" "${DUMP_DIR}/${file##*/}-${dup_count}"
+		fi
+		sed "${SED_ARG[@]}" "s|${file_entry}||g" "${DUMP_LOG}"
+		sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
+		echo "${file_entry}" >>"${DUMP_LOG}"
+	done
 }
 
 #######################################
@@ -143,115 +143,115 @@ function put() {
 #   $*: all the no flag command line argument are parsed as files to undo
 #######################################
 function undo() {
-  local file_to_revert fuzzy confirm_prompt confirm_result undo_location files_to_revert force_overwrite revert_count
-  files_to_revert=()
-  undo_location="original"
-  revert_count=1
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -l|--local)
-        undo_location="local"
-        shift
-        ;;
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      -i|--confirm)
-        confirm_prompt="true"
-        shift
-        ;;
-      -s|--select)
-        fuzzy="true"
-        shift
-        ;;
-      -f|--force)
-        force_overwrite="true"
-        shift
-        ;;
-      -n|--num)
-        [[ -z "$2" ]] && echo "Invalid option: $1" >&2 && usage && exit 1
-        revert_count=$(($2))
-        [[ "${revert_count}" -lt 1 ]] && usage && exit 1
-        shift
-        shift
-        ;;
-      *)
-        files_to_revert=("$@")
-        break
-        ;;
-    esac
-  done
+	local file_to_revert fuzzy confirm_prompt confirm_result undo_location files_to_revert force_overwrite revert_count
+	files_to_revert=()
+	undo_location="original"
+	revert_count=1
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-l | --local)
+			undo_location="local"
+			shift
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		-i | --confirm)
+			confirm_prompt="true"
+			shift
+			;;
+		-s | --select)
+			fuzzy="true"
+			shift
+			;;
+		-f | --force)
+			force_overwrite="true"
+			shift
+			;;
+		-n | --num)
+			[[ -z "$2" ]] && echo "Invalid option: $1" >&2 && usage && exit 1
+			revert_count=$(($2))
+			[[ "${revert_count}" -lt 1 ]] && usage && exit 1
+			shift
+			shift
+			;;
+		*)
+			files_to_revert=("$@")
+			break
+			;;
+		esac
+	done
 
-  _move_file() {
-    local file_name file_path file_line
-    file_line="$1"
-    file_name="${file_line%%<:::>*}"
+	_move_file() {
+		local file_name file_path file_line
+		file_line="$1"
+		file_name="${file_line%%<:::>*}"
 
-    case "${undo_location}" in
-      "original")
-        file_path="${file_line##*<:::>}"
-        ;;
-      "local")
-        file_path="$PWD/${file_name%%-*}"
-        ;;
-      *)
-        file_path="${file_line##*<:::>}"
-        ;;
-    esac
+		case "${undo_location}" in
+		"original")
+			file_path="${file_line##*<:::>}"
+			;;
+		"local")
+			file_path="$PWD/${file_name%%-*}"
+			;;
+		*)
+			file_path="${file_line##*<:::>}"
+			;;
+		esac
 
-    [[ -n "${confirm_prompt}" ]] \
-      && confirm_result=$(get_confirm "undo: reset ${file_name} to ${file_path}?") \
-      && [[ "${confirm_result}" != "y" ]] \
-      && return
+		[[ -n "${confirm_prompt}" ]] &&
+			confirm_result=$(get_confirm "undo: reset ${file_name} to ${file_path}?") &&
+			[[ "${confirm_result}" != "y" ]] &&
+			return
 
-    if [[ -z "${force_overwrite}" ]]; then
-      [[ -e "${file_path}" ]] \
-        && echo "${file_path} already exits" >&2 \
-        && exit 1
-    else
-      [[ -e "${file_path}" ]] \
-        && rm -rf "${file_path}"
-    fi
+		if [[ -z "${force_overwrite}" ]]; then
+			[[ -e "${file_path}" ]] &&
+				echo "${file_path} already exits" >&2 &&
+				exit 1
+		else
+			[[ -e "${file_path}" ]] &&
+				rm -rf "${file_path}"
+		fi
 
-    sed "${SED_ARG[@]}" "s|${file_line}||g" "${DUMP_LOG}"
-    sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
-    [[ ! -d "${file_path%/*}" ]] \
-      && mkdir -p "${file_path%/*}"
-    mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
-  }
+		sed "${SED_ARG[@]}" "s|${file_line}||g" "${DUMP_LOG}"
+		sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
+		[[ ! -d "${file_path%/*}" ]] &&
+			mkdir -p "${file_path%/*}"
+		mv -v "${DUMP_DIR}"/"${file_name}" "${file_path}"
+	}
 
-  if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
-    for file in "${files_to_revert[@]}"; do
-      file_to_revert=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
-      [[ -z "${file_to_revert}" ]] \
-        && echo "File not found in dump log" \
-        && continue
-      _move_file "${file_to_revert}"
-    done
+	if [[ "${#files_to_revert[@]}" -gt 0 ]]; then
+		for file in "${files_to_revert[@]}"; do
+			file_to_revert=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
+			[[ -z "${file_to_revert}" ]] &&
+				echo "File not found in dump log" &&
+				continue
+			_move_file "${file_to_revert}"
+		done
 
-  elif [[ -n "${fuzzy}" ]]; then
-    while IFS= read -r line; do
-      files_to_revert+=("${line}")
-    done < <(_list_dumps)
-    [[ "${#files_to_revert[@]}" -eq 0 ]] \
-      && echo "No file to undo" \
-      && exit 1
-    for file_to_revert in "${files_to_revert[@]}"; do
-      _move_file "${file_to_revert}"
-    done
+	elif [[ -n "${fuzzy}" ]]; then
+		while IFS= read -r line; do
+			files_to_revert+=("${line}")
+		done < <(_list_dumps)
+		[[ "${#files_to_revert[@]}" -eq 0 ]] &&
+			echo "No file to undo" &&
+			exit 1
+		for file_to_revert in "${files_to_revert[@]}"; do
+			_move_file "${file_to_revert}"
+		done
 
-  else
-    while IFS= read -r line; do
-      files_to_revert+=("${line}")
-    done < <(tac "${DUMP_LOG}" | head -"${revert_count}")
-    [[ "${#files_to_revert[@]}" -eq 0 ]] \
-      && echo "No file to undo" \
-      && exit 1
-    for file_to_revert in "${files_to_revert[@]}"; do
-      _move_file "${file_to_revert}"
-    done
-  fi
+	else
+		while IFS= read -r line; do
+			files_to_revert+=("${line}")
+		done < <(tac "${DUMP_LOG}" | head -"${revert_count}")
+		[[ "${#files_to_revert[@]}" -eq 0 ]] &&
+			echo "No file to undo" &&
+			exit 1
+		for file_to_revert in "${files_to_revert[@]}"; do
+			_move_file "${file_to_revert}"
+		done
+	fi
 }
 
 #######################################
@@ -261,13 +261,13 @@ function undo() {
 #   e.g. hello.py -> ~/Desktop/hello.py
 #######################################
 function _list_dumps() {
-  local all_dumps esc
-  all_dumps=$(tac "${DUMP_LOG}")
-  esc=$(printf '\033')
-  sed "s|^\\(.*\\)<:::>\\(.*\\)$|${esc}[32m\\1 ${esc}[0m-> ${esc}[36m\\2|g" <(echo "${all_dumps}") \
-    | awk 'NF' \
-    | fzf --multi --exit-0 --ansi \
-    | sed "s|\\(.*\\) -> \\(.*\\)|\\1<:::>\\2|g"
+	local all_dumps esc
+	all_dumps=$(tac "${DUMP_LOG}")
+	esc=$(printf '\033')
+	sed "s|^\\(.*\\)<:::>\\(.*\\)$|${esc}[32m\\1 ${esc}[0m-> ${esc}[36m\\2|g" <(echo "${all_dumps}") |
+		awk 'NF' |
+		fzf --multi --exit-0 --ansi |
+		sed "s|\\(.*\\) -> \\(.*\\)|\\1<:::>\\2|g"
 }
 
 #######################################
@@ -278,103 +278,103 @@ function _list_dumps() {
 #   $*: all the no flag command line argument are parsed as files to clean
 #######################################
 function clean() {
-  local fuzzy files_to_clean file_to_clean confirm_prompt confirm_result file_path file_name
-  files_to_clean=()
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -i|--confirm)
-        confirm_prompt="true"
-        shift
-        ;;
-      -s|--select)
-        fuzzy="true"
-        shift
-        ;;
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        files_to_clean=("$@")
-        break
-        ;;
-    esac
-  done
+	local fuzzy files_to_clean file_to_clean confirm_prompt confirm_result file_path file_name
+	files_to_clean=()
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-i | --confirm)
+			confirm_prompt="true"
+			shift
+			;;
+		-s | --select)
+			fuzzy="true"
+			shift
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			files_to_clean=("$@")
+			break
+			;;
+		esac
+	done
 
-  if [[ "${#files_to_clean[@]}" -gt 0 ]]; then
-    for file in "${files_to_clean[@]}"; do
-      file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
-      file_name="${file_to_clean%%<:::>*}"
-      file_path="${file_to_clean##*<:::>}"
-      [[ -z "${file_to_clean}" ]] \
-        && echo "File not found in dump log" \
-        && continue
-      [[ -n "${confirm_prompt}" ]] \
-        && confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") \
-        && [[ "${confirm_result}" != "y" ]] \
-        && exit 0
-      sed "${SED_ARG[@]}" "s|${file_to_clean}||g" "${DUMP_LOG}"
-      sed "${SED_ARG[@]}" "/^[[:space:]]*$/d" "${DUMP_LOG}"
-      rm -vrf "${DUMP_DIR:?}/${file_name}"
-    done
+	if [[ "${#files_to_clean[@]}" -gt 0 ]]; then
+		for file in "${files_to_clean[@]}"; do
+			file_to_clean=$(grep -xE "^$file.*$" "${DUMP_LOG}" | awk 'END{print}')
+			file_name="${file_to_clean%%<:::>*}"
+			file_path="${file_to_clean##*<:::>}"
+			[[ -z "${file_to_clean}" ]] &&
+				echo "File not found in dump log" &&
+				continue
+			[[ -n "${confirm_prompt}" ]] &&
+				confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") &&
+				[[ "${confirm_result}" != "y" ]] &&
+				exit 0
+			sed "${SED_ARG[@]}" "s|${file_to_clean}||g" "${DUMP_LOG}"
+			sed "${SED_ARG[@]}" "/^[[:space:]]*$/d" "${DUMP_LOG}"
+			rm -vrf "${DUMP_DIR:?}/${file_name}"
+		done
 
-  elif [[ -z "${fuzzy}" ]]; then
-    [[ -n "${confirm_prompt}" ]] \
-      && confirm_result=$(get_confirm "clean: permanently delete all dumps?") \
-      && [[ "${confirm_result}" != "y" ]] \
-      && exit 0
-    rm -vrf "${DUMP_DIR:?}"/{*,.*??}
-    truncate -s 0 "${DUMP_LOG}"
+	elif [[ -z "${fuzzy}" ]]; then
+		[[ -n "${confirm_prompt}" ]] &&
+			confirm_result=$(get_confirm "clean: permanently delete all dumps?") &&
+			[[ "${confirm_result}" != "y" ]] &&
+			exit 0
+		rm -vrf "${DUMP_DIR:?}"/{*,.*??}
+		truncate -s 0 "${DUMP_LOG}"
 
-  else
-    while IFS= read -r line; do
-      files_to_clean+=("${line}")
-    done < <(_list_dumps)
-    [[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
-    for file in "${files_to_clean[@]}"; do
-      file_name="${file%%<:::>*}"
-      [[ -n "${confirm_prompt}" ]] \
-        && confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") \
-        && [[ "${confirm_result}" != "y" ]] \
-        && continue
-      sed "${SED_ARG[@]}" "s|${file}||g" "${DUMP_LOG}"
-      sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
-      rm -vrf "${DUMP_DIR:?}/${file_name}"
-    done
-  fi
+	else
+		while IFS= read -r line; do
+			files_to_clean+=("${line}")
+		done < <(_list_dumps)
+		[[ "${#files_to_clean[@]}" -eq 0 ]] && exit 1
+		for file in "${files_to_clean[@]}"; do
+			file_name="${file%%<:::>*}"
+			[[ -n "${confirm_prompt}" ]] &&
+				confirm_result=$(get_confirm "clean: permanently delete ${file_name}?") &&
+				[[ "${confirm_result}" != "y" ]] &&
+				continue
+			sed "${SED_ARG[@]}" "s|${file}||g" "${DUMP_LOG}"
+			sed "${SED_ARG[@]}" '/^[[:space:]]*$/d' "${DUMP_LOG}"
+			rm -vrf "${DUMP_DIR:?}/${file_name}"
+		done
+	fi
 }
 
 #######################################
 # using a pager to list all dumps
 #######################################
 function log() {
-  local pager
-  while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      -p|--pager)
-        pager="true"
-        shift
-        ;;
-    esac
-  done
+	local pager
+	while [[ "$#" -gt 0 ]]; do
+		case "$1" in
+		-h | --help)
+			usage
+			exit 0
+			;;
+		-p | --pager)
+			pager="true"
+			shift
+			;;
+		esac
+	done
 
-  tac "${DUMP_LOG}" \
-    | awk -F "<:::>" '
+	tac "${DUMP_LOG}" |
+		awk -F "<:::>" '
         BEGIN { printf "%-31s %-40s\n", "Name", "Location" }
         { printf "%-30s %-40s\n", $1, $2}
-      ' \
-    | (if [[ -n "${pager}" ]]; then less; else cat; fi)
+      ' |
+		(if [[ -n "${pager}" ]]; then less; else cat; fi)
 }
 
 #######################################
 # print usage of dump-cli
 #######################################
 function usage() {
-  echo -e "Usage: dump [-h] [-p] [-c] [-u] [-l] [FILE] [OPTIONS] ...
+	echo -e "Usage: dump [-h] [-p] [-c] [-u] [-l] [FILE] [OPTIONS] ...
 
 A simple to use trash utility which persist the dumped file and it's original
 location for future undos. Integrated with fzf for interactive selection of the
@@ -395,6 +395,7 @@ Optional arguments:
   Optional arguments:
     -i, --confirm\t\tprompt confirmation before dumping each file.
     -s, --select\t\tselect a file to delete through fzf.
+    -r, --recursive\t\tdump directory.
 
   Example:
     dump --put hello.py hello.java src/* bin
@@ -437,29 +438,28 @@ Optional arguments:
     -p, --pager\t\tuse less as a pager to display output."
 }
 
-
 action_comand="put"
 case $1 in
-  --help|-h)
-    usage
-    exit 0
-    ;;
-  --put|-p)
-    action_comand="put"
-    shift
-    ;;
-  --clean|-c)
-    action_comand="clean"
-    shift
-    ;;
-  --undo|-u)
-    action_comand='undo'
-    shift
-    ;;
-  --log|-l)
-    action_comand='log'
-    shift
-    ;;
+--help | -h)
+	usage
+	exit 0
+	;;
+--put | -p)
+	action_comand="put"
+	shift
+	;;
+--clean | -c)
+	action_comand="clean"
+	shift
+	;;
+--undo | -u)
+	action_comand='undo'
+	shift
+	;;
+--log | -l)
+	action_comand='log'
+	shift
+	;;
 esac
 
 "${action_comand}" "$@"
